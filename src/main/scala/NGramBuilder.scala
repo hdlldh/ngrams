@@ -1,6 +1,4 @@
-import org.apache.spark.ml.feature.NGram
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.SparkSession
 
 object NGramBuilder {
 
@@ -61,36 +59,5 @@ object NGramBuilder {
       .save(args(4))
 
   }
-
-//  def ngramCounter(n: Int, replacedCorpus: RDD[Array[String]])(implicit
-//    spark: SparkSession
-//  ): DataFrame = {
-//    import spark.implicits._
-//
-//    val prefix = (1 until n).map(_ => NGramConfig.StartToken).toArray
-//    val suffix = (1 until n).map(_ => NGramConfig.EndToken).toArray
-//    val inputCol = "sentence"
-//    val outputCol = "ngrams"
-//
-//    val ngramCorpus = replacedCorpus
-//      .map(r => prefix ++ r ++ suffix)
-//      .toDF(inputCol)
-//
-//    val ngram = new NGram()
-//      .setN(n)
-//      .setInputCol(inputCol)
-//      .setOutputCol(outputCol)
-//
-//    ngram
-//      .transform(ngramCorpus)
-//      .select(outputCol)
-//      .rdd
-//      .map(r => r.getSeq[String](0))
-//      .flatMap(_.toSeq)
-//      .map(r => (r, 1L))
-//      .reduceByKey(_ + _)
-//      .toDF("ngram", "count")
-
-//  }
 
 }
