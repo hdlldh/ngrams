@@ -5,7 +5,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 object NGramBuilder {
 
   def main(args: Array[String]): Unit = {
-    implicit val spark:SparkSession = SparkSession
+    implicit val spark: SparkSession = SparkSession
       .builder()
       .getOrCreate()
 
@@ -16,7 +16,8 @@ object NGramBuilder {
     val vocabSize = args(0).toInt
     val corpus = sc.textFile(args(1))
 
-    val cleanedCorpus = corpus.map(r => r.toLowerCase)
+    val cleanedCorpus = corpus
+      .map(r => r.toLowerCase)
       .map(r => r.replaceAll("[^\\w\\.\\?\\! ]+", " "))
       .map(r => r.replaceAll("\\.", " ."))
       .map(r => r.replaceAll("\\?", " ?"))
@@ -35,7 +36,8 @@ object NGramBuilder {
       .toDF("token", "count")
       .limit(vocabSize)
 
-    topNTokens.repartition(1)
+    topNTokens
+      .repartition(1)
       .write
       .mode("overwrite")
       .save(args(2))
@@ -48,26 +50,32 @@ object NGramBuilder {
       .toSet
 
     val replacedCorpus = tokenizedCorpus
-      .map(r => r.map { w =>
-        if (vocabSet.contains(w)) w
-        else NGramConfig.UnknownToken
-      })
+      .map(r =>
+        r.map { w =>
+          if (vocabSet.contains(w)) w
+          else NGramConfig.UnknownToken
+        }
+      )
 
     val bigramFrame = ngramCounter(2, replacedCorpus)
-    bigramFrame.repartition(1)
+    bigramFrame
+      .repartition(1)
       .write
       .mode("overwrite")
       .save(args(3))
 
     val trigramFrame = ngramCounter(3, replacedCorpus)
-    trigramFrame.repartition(1)
+    trigramFrame
+      .repartition(1)
       .write
       .mode("overwrite")
       .save(args(4))
 
   }
 
-  def ngramCounter(n: Int, replacedCorpus: RDD[Array[String]])(implicit spark: SparkSession): DataFrame = {
+  def ngramCounter(n: Int, replacedCorpus: RDD[Array[String]])(implicit
+    spark: SparkSession
+  ): DataFrame = {
     import spark.implicits._
 
     val prefix = (1 until n).map(_ => NGramConfig.StartToken).toArray
@@ -84,7 +92,8 @@ object NGramBuilder {
       .setInputCol(inputCol)
       .setOutputCol(outputCol)
 
-    ngram.transform(ngramCorpus)
+    ngram
+      .transform(ngramCorpus)
       .select(outputCol)
       .rdd
       .map(r => r.getSeq[String](0))
@@ -94,6 +103,5 @@ object NGramBuilder {
       .toDF("ngram", "count")
 
   }
-
 
 }
