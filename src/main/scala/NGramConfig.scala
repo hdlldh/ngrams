@@ -3,4 +3,5 @@ object NGramConfig {
   final val UnknownToken = "<unk>"
   final val StartToken = "<s>"
   final val EndToken = "<e>"
+  final val K = 1.0
 }
