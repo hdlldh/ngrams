@@ -16,16 +16,7 @@ object NGramBuilder {
     val vocabSize = args(0).toInt
     val corpus = sc.textFile(args(1))
 
-    val cleanedCorpus = corpus
-      .map(r => r.toLowerCase)
-      .map(r => r.replaceAll("[^\\w\\.\\?\\! ]+", " "))
-      .map(r => r.replaceAll("\\.", " ."))
-      .map(r => r.replaceAll("\\?", " ?"))
-      .map(r => r.replaceAll("\\!", " !"))
-
-    val tokenizedCorpus = cleanedCorpus
-      .map(r => r.split("\\s+"))
-      .filter(r => r.length >= NGramConfig.MinNumTokens)
+    val tokenizedCorpus = Utils.tokenizer(corpus)
 
     val topNTokens = tokenizedCorpus
       .flatMap(_.toSeq)
@@ -49,22 +40,20 @@ object NGramBuilder {
       .collect
       .toSet
 
-    val replacedCorpus = tokenizedCorpus
-      .map(r =>
-        r.map { w =>
-          if (vocabSet.contains(w)) w
-          else NGramConfig.UnknownToken
-        }
-      )
+    val replacedCorpus = Utils.oovHandler(tokenizedCorpus, vocabSet)
 
-    val bigramFrame = ngramCounter(2, replacedCorpus)
+    val extBiGram = Utils.tokenAdder(2, replacedCorpus)
+    val bigramFrame = Utils.ngramCounter(2, extBiGram)
+
     bigramFrame
       .repartition(1)
       .write
       .mode("overwrite")
       .save(args(3))
 
-    val trigramFrame = ngramCounter(3, replacedCorpus)
+    val extTriGram = Utils.tokenAdder(3, replacedCorpus)
+    val trigramFrame = Utils.ngramCounter(3, extTriGram)
+
     trigramFrame
       .repartition(1)
       .write
@@ -73,35 +62,35 @@ object NGramBuilder {
 
   }
 
-  def ngramCounter(n: Int, replacedCorpus: RDD[Array[String]])(implicit
-    spark: SparkSession
-  ): DataFrame = {
-    import spark.implicits._
+//  def ngramCounter(n: Int, replacedCorpus: RDD[Array[String]])(implicit
+//    spark: SparkSession
+//  ): DataFrame = {
+//    import spark.implicits._
+//
+//    val prefix = (1 until n).map(_ => NGramConfig.StartToken).toArray
+//    val suffix = (1 until n).map(_ => NGramConfig.EndToken).toArray
+//    val inputCol = "sentence"
+//    val outputCol = "ngrams"
+//
+//    val ngramCorpus = replacedCorpus
+//      .map(r => prefix ++ r ++ suffix)
+//      .toDF(inputCol)
+//
+//    val ngram = new NGram()
+//      .setN(n)
+//      .setInputCol(inputCol)
+//      .setOutputCol(outputCol)
+//
+//    ngram
+//      .transform(ngramCorpus)
+//      .select(outputCol)
+//      .rdd
+//      .map(r => r.getSeq[String](0))
+//      .flatMap(_.toSeq)
+//      .map(r => (r, 1L))
+//      .reduceByKey(_ + _)
+//      .toDF("ngram", "count")
 
-    val prefix = (1 until n).map(_ => NGramConfig.StartToken).toArray
-    val suffix = (1 until n).map(_ => NGramConfig.EndToken).toArray
-    val inputCol = "sentence"
-    val outputCol = "ngrams"
-
-    val ngramCorpus = replacedCorpus
-      .map(r => prefix ++ r ++ suffix)
-      .toDF(inputCol)
-
-    val ngram = new NGram()
-      .setN(n)
-      .setInputCol(inputCol)
-      .setOutputCol(outputCol)
-
-    ngram
-      .transform(ngramCorpus)
-      .select(outputCol)
-      .rdd
-      .map(r => r.getSeq[String](0))
-      .flatMap(_.toSeq)
-      .map(r => (r, 1L))
-      .reduceByKey(_ + _)
-      .toDF("ngram", "count")
-
-  }
+//  }
 
 }
