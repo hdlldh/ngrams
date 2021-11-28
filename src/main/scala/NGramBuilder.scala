@@ -5,7 +5,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 object NGramBuilder {
 
   def main(args: Array[String]): Unit = {
-    implicit val spark = SparkSession
+    implicit val spark:SparkSession = SparkSession
       .builder()
       .getOrCreate()
 
@@ -54,10 +54,16 @@ object NGramBuilder {
       })
 
     val bigramFrame = ngramCounter(2, replacedCorpus)
-    bigramFrame.show(false)
+    bigramFrame.repartition(1)
+      .write
+      .mode("overwrite")
+      .save(args(3))
 
     val trigramFrame = ngramCounter(3, replacedCorpus)
-    trigramFrame.show(false)
+    trigramFrame.repartition(1)
+      .write
+      .mode("overwrite")
+      .save(args(4))
 
   }
 
