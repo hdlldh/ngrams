@@ -1,5 +1,5 @@
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{desc, regexp_extract, regexp_replace}
+import org.apache.spark.sql.functions._
 
 object WordInsight {
   def main(args: Array[String]): Unit = {
@@ -39,11 +39,19 @@ object WordInsight {
       .toDF("masked_ngram", "hint_words")
 
     val tokenizedSubject = Utils.tokenizer(testSubject)
-    val replacedSubject = Utils.handleOov(tokenizedSubject, vocabSet)
-    val extendSubject = Utils.addPrefixAndSuffix(replacedSubject, 1, 1)
+//    val replacedSubject = Utils.handleOov(tokenizedSubject, vocabSet)
+    val extendSubject = Utils.addPrefixAndSuffix(tokenizedSubject, 1, 1)
     val trigramCount = Utils
       .countNGrams(3, extendSubject)
       .withColumn("orig_word", regexp_extract($"ngram", "(\\S+) (\\S+) (\\S+)", 2))
+      .select("orig_word", "ngram")
+      .rdd
+      .map(r => (r.getString(0), r.getString(1).split("\\s+").map{ w =>
+          if (vocabSet.contains(w)) w
+          else NGramConfig.UnknownToken
+        }.mkString(" ")
+      ))
+      .toDF("orig_word", "ngram")
       .withColumn(
         "masked_ngram",
         regexp_replace($"ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
