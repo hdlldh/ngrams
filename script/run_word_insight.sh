@@ -8,5 +8,5 @@ $SPARK_HOME/bin/spark-submit \
 --executor-memory 12G \
 $HOME/Workspace/ngrams/target/scala-2.12/ngrams_2.12-0.1.jar \
 $HOME/tmp/top_n_vocab \
-$HOME/tmp/ksmooth_prob \
+$HOME/tmp/top_hint_words \
 $1

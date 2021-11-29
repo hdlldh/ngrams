@@ -25,18 +25,6 @@ object WordInsight {
 
     val probFrame = spark.read
       .load(args(1))
-      .filter($"word" =!= NGramConfig.UnknownToken)
-      .filter($"word" =!= NGramConfig.StartToken)
-      .filter($"word" =!= NGramConfig.EndToken)
-      .sort($"masked_ngram", desc("probability"))
-      .select("masked_ngram", "word", "probability")
-      .rdd
-      .map { r =>
-        (r.getString(0), s"${r.getString(1)}:${r.getDouble(2).toString}")
-      }
-      .groupByKey()
-      .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
-      .toDF("masked_ngram", "hint_words")
 
     val tokenizedSubject = Utils.tokenizer(testSubject)
 //    val replacedSubject = Utils.handleOov(tokenizedSubject, vocabSet)
@@ -46,22 +34,30 @@ object WordInsight {
       .withColumn("orig_word", regexp_extract($"ngram", "(\\S+) (\\S+) (\\S+)", 2))
       .select("orig_word", "ngram")
       .rdd
-      .map(r => (r.getString(0), r.getString(1).split("\\s+").map{ w =>
-          if (vocabSet.contains(w)) w
-          else NGramConfig.UnknownToken
-        }.mkString(" ")
-      ))
-      .toDF("orig_word", "ngram")
+      .map(r =>
+        (
+          r.getString(0),
+          r.getString(1),
+          r.getString(1)
+            .split("\\s+")
+            .map { w =>
+              if (vocabSet.contains(w)) w
+              else NGramConfig.UnknownToken
+            }
+            .mkString(" ")
+        )
+      )
+      .toDF("orig_word", "orig_ngram", "replaced_ngram")
       .withColumn(
         "masked_ngram",
-        regexp_replace($"ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
+        regexp_replace($"replaced_ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
       )
 
     val wordHints = trigramCount
       .join(probFrame, Seq("masked_ngram"), "left")
       .na
       .fill("n/a", Seq("hint_words"))
-      .select("masked_ngram", "orig_word", "hint_words")
+      .select("orig_ngram","masked_ngram", "orig_word", "hint_words")
     wordHints.show(false)
 
   }
