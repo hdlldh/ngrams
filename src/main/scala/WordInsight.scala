@@ -12,22 +12,19 @@ object WordInsight {
     val sc = spark.sparkContext
     sc.setLogLevel("WARN")
 
-//    val testSubject = sc.parallelize(Seq("Get Netflix for an entire year for $39.99 only."))
     val testSubject = sc.parallelize(Seq(args(2)))
 
     val topNTokens = spark.read.load(args(0))
-    val vocabSet = topNTokens
+    val vocabSet = (topNTokens
       .select("token")
       .rdd
       .map(r => r.getString(0))
-      .collect
-      .toSet
+      .collect ++ Array(NGramConfig.StartToken, NGramConfig.EndToken, ".", "?", "!", "$")).toSet
 
     val probFrame = spark.read
       .load(args(1))
 
     val tokenizedSubject = Utils.tokenizer(testSubject)
-//    val replacedSubject = Utils.handleOov(tokenizedSubject, vocabSet)
     val extendSubject = Utils.addPrefixAndSuffix(tokenizedSubject, 1, 1)
     val trigramCount = Utils
       .countNGrams(3, extendSubject)
@@ -57,7 +54,7 @@ object WordInsight {
       .join(probFrame, Seq("masked_ngram"), "left")
       .na
       .fill("n/a", Seq("hint_words"))
-      .select("orig_ngram","masked_ngram", "orig_word", "hint_words")
+      .select("orig_ngram", "masked_ngram", "orig_word", "hint_words")
     wordHints.show(false)
 
   }
