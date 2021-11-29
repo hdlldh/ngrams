@@ -4,4 +4,5 @@ object NGramConfig {
   final val StartToken = "<s>"
   final val EndToken = "<e>"
   final val K = 1.0
+  final val NumHints = 5
 }
