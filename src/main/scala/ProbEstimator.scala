@@ -17,7 +17,6 @@ object ProbEstimator {
 
     val bigramFrame = spark.read
       .load(args(1))
-      .withColumnRenamed("ngram", "masked_ngram")
       .withColumnRenamed("count", "denominator")
 
     val trigramFrame = spark.read

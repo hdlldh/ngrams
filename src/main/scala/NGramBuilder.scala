@@ -56,7 +56,6 @@ object NGramBuilder {
       )
       .groupBy("masked_ngram")
       .agg(sum($"count").as("count"))
-      .withColumnRenamed("masked_ngram", "ngram")
 
     bigramFrame
       .repartition(1)
