@@ -1,6 +1,8 @@
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{desc, split}
 
+import scala.util.Try
+
 object WordInsight {
   def main(args: Array[String]): Unit = {
     implicit val spark: SparkSession = SparkSession
@@ -27,7 +29,9 @@ object WordInsight {
       .load(args(1))
       .sort($"prevBigram", desc("probability"))
       .rdd
-      .map(r => (r.getString(0), s"${r.getString(1)}:${r.getDouble(2).toString}"))
+      .map(r =>
+        (r.getString(0), s"${r.getString(1)}:${Try { r.getDouble(2) }.toOption.getOrElse("na")}")
+      )
       .groupByKey()
       .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
       .toDF("prevBigram", "wordHint")
@@ -36,7 +40,9 @@ object WordInsight {
       .load(args(2))
       .sort($"nextBigram", desc("probability"))
       .rdd
-      .map(r => (r.getString(1), s"${r.getString(0)}:${r.getDouble(2).toString}"))
+      .map(r =>
+        (r.getString(1), s"${r.getString(0)}:${Try { r.getDouble(2) }.toOption.getOrElse("na")}")
+      )
       .groupByKey()
       .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
       .toDF("nextBigram", "wordHint")
