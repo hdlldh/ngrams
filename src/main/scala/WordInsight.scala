@@ -12,6 +12,7 @@ object WordInsight {
     import spark.implicits._
 
     val sc = spark.sparkContext
+    sc.setLogLevel("WARN")
 
 //    val testSubject = sc.parallelize(Seq("Get Netflix for an entire year for $39.99 only."))
     val testSubject = sc.parallelize(Seq(args(3)))
