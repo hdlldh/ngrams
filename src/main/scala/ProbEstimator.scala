@@ -21,6 +21,7 @@ object ProbEstimator {
       .load(args(2))
       .withColumnRenamed("count", "numerator")
       .withColumn("trigramArray", split($"ngram", " "))
+      .filter(size($"trigramArray") === 3)
 
     val forwardTrigram = trigramFrame
       .select("numerator", "trigramArray")
