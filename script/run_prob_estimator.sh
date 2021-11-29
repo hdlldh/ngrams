@@ -10,5 +10,4 @@ $HOME/Workspace/ngrams/target/scala-2.12/ngrams_2.12-0.1.jar \
 $HOME/tmp/top_n_vocab \
 $HOME/tmp/bigram_counts \
 $HOME/tmp/trigram_counts \
-$HOME/tmp/forward_prob \
-$HOME/tmp/backward_prob
+$HOME/tmp/ksmooth_prob

@@ -5,4 +5,6 @@ object NGramConfig {
   final val EndToken = "<e>"
   final val K = 1.0
   final val NumHints = 5
+  final val WordPattern = "\\s+.+\\s+"
+  final val WordReplacement = " # "
 }

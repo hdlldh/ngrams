@@ -1,4 +1,5 @@
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
 
 object NGramBuilder {
 
@@ -38,25 +39,30 @@ object NGramBuilder {
       .collect
       .toSet
 
-    val replacedCorpus = Utils.oovHandler(tokenizedCorpus, vocabSet)
+    val replacedCorpus = Utils.handleOov(tokenizedCorpus, vocabSet)
 
-    val extBiGram = Utils.tokenAdder(2, replacedCorpus)
-    val bigramFrame = Utils.ngramCounter(2, extBiGram)
+    val extendCorpus = Utils.addPrefixAndSuffix(replacedCorpus, 1, 1)
+    val trigramFrame = Utils.countNGrams(3, extendCorpus)
+    trigramFrame
+      .repartition(1)
+      .write
+      .mode("overwrite")
+      .save(args(4))
+
+    val bigramFrame = trigramFrame
+      .withColumn(
+        "masked_ngram",
+        regexp_replace($"ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
+      )
+      .groupBy("masked_ngram")
+      .agg(sum($"count").as("count"))
+      .withColumnRenamed("masked_ngram", "ngram")
 
     bigramFrame
       .repartition(1)
       .write
       .mode("overwrite")
       .save(args(3))
-
-    val extTriGram = Utils.tokenAdder(3, replacedCorpus)
-    val trigramFrame = Utils.ngramCounter(3, extTriGram)
-
-    trigramFrame
-      .repartition(1)
-      .write
-      .mode("overwrite")
-      .save(args(4))
 
   }
 

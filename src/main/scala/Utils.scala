@@ -14,7 +14,7 @@ object Utils {
       .filter(r => r.length >= NGramConfig.MinNumTokens)
   }
 
-  def oovHandler(tokenizedCorpus: RDD[Array[String]], vocabSet: Set[String]): RDD[Array[String]] = {
+  def handleOov(tokenizedCorpus: RDD[Array[String]], vocabSet: Set[String]): RDD[Array[String]] = {
     tokenizedCorpus
       .map(r =>
         r.map { w =>
@@ -24,14 +24,17 @@ object Utils {
       )
   }
 
-  def tokenAdder(n: Int, replacedCorpus: RDD[Array[String]]): RDD[Array[String]] = {
-    val range = 1 until n
-    val prefix = range.map(_ => NGramConfig.StartToken).toArray
-    val suffix = range.map(_ => NGramConfig.EndToken).toArray
+  def addPrefixAndSuffix(
+    replacedCorpus: RDD[Array[String]],
+    numStartToken: Int,
+    numEndToken: Int
+  ): RDD[Array[String]] = {
+    val prefix = (1 to numStartToken).map(_ => NGramConfig.StartToken).toArray
+    val suffix = (1 to numEndToken).map(_ => NGramConfig.EndToken).toArray
     replacedCorpus.map(r => prefix ++ r ++ suffix)
   }
 
-  def ngramCounter(
+  def countNGrams(
     n: Int,
     extCorpus: RDD[Array[String]]
   )(implicit

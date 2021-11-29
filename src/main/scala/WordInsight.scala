@@ -1,7 +1,5 @@
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{desc, split}
-
-import scala.util.Try
+import org.apache.spark.sql.functions.{desc, regexp_extract, regexp_replace}
 
 object WordInsight {
   def main(args: Array[String]): Unit = {
@@ -15,10 +13,9 @@ object WordInsight {
     sc.setLogLevel("WARN")
 
 //    val testSubject = sc.parallelize(Seq("Get Netflix for an entire year for $39.99 only."))
-    val testSubject = sc.parallelize(Seq(args(3)))
+    val testSubject = sc.parallelize(Seq(args(2)))
 
     val topNTokens = spark.read.load(args(0))
-//    val vocabSize = topNTokens.count()
     val vocabSet = topNTokens
       .select("token")
       .rdd
@@ -26,59 +23,38 @@ object WordInsight {
       .collect
       .toSet
 
-    val forwardProb = spark.read
+    val probFrame = spark.read
       .load(args(1))
-      .sort($"prevBigram", desc("probability"))
+      .filter($"word" =!= NGramConfig.UnknownToken)
+      .filter($"word" =!= NGramConfig.StartToken)
+      .filter($"word" =!= NGramConfig.EndToken)
+      .sort($"masked_ngram", desc("probability"))
+      .select("masked_ngram", "word", "probability")
       .rdd
-      .map(r =>
-        (r.getString(0), s"${r.getString(1)}:${Try { r.getDouble(2) }.toOption.getOrElse("na")}")
-      )
+      .map { r =>
+        (r.getString(0), s"${r.getString(1)}:${r.getDouble(2).toString}")
+      }
       .groupByKey()
       .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
-      .toDF("prevBigram", "wordHint")
-
-    val backwardProb = spark.read
-      .load(args(2))
-      .sort($"nextBigram", desc("probability"))
-      .rdd
-      .map(r =>
-        (r.getString(1), s"${r.getString(0)}:${Try { r.getDouble(2) }.toOption.getOrElse("na")}")
-      )
-      .groupByKey()
-      .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
-      .toDF("nextBigram", "wordHint")
+      .toDF("masked_ngram", "hint_words")
 
     val tokenizedSubject = Utils.tokenizer(testSubject)
-    val replacedSubject = Utils.oovHandler(tokenizedSubject, vocabSet)
-    val extendSubject = Utils.tokenAdder(2, replacedSubject)
+    val replacedSubject = Utils.handleOov(tokenizedSubject, vocabSet)
+    val extendSubject = Utils.addPrefixAndSuffix(replacedSubject, 1, 1)
     val trigramCount = Utils
-      .ngramCounter(3, extendSubject)
-      .withColumn("trigramArray", split($"ngram", " "))
+      .countNGrams(3, extendSubject)
+      .withColumn("orig_word", regexp_extract($"ngram", "(\\S+) (\\S+) (\\S+)", 2))
+      .withColumn(
+        "masked_ngram",
+        regexp_replace($"ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
+      )
 
-    val forwardFrame = trigramCount
-      .select("trigramArray")
-      .rdd
-      .map(r => (r.getSeq[String](0).dropRight(1).mkString(" "), r.getSeq[String](0).last))
-      .toDF("prevBigram", "nextOrigWord")
-      .filter($"nextOrigWord" =!= NGramConfig.UnknownToken)
-      .filter($"nextOrigWord" =!= NGramConfig.EndToken)
+    val wordHints = trigramCount
+      .join(probFrame, Seq("masked_ngram"), "left")
+      .na
+      .fill("n/a", Seq("hint_words"))
+      .select("masked_ngram", "orig_word", "hint_words")
+    wordHints.show(false)
 
-    val wordForward = forwardFrame
-      .join(forwardProb, Seq("prevBigram"), "left")
-      .select("prevBigram", "nextOrigWord", "wordHint")
-    wordForward.show(false)
-
-    val backwardFrame = trigramCount
-      .select("trigramArray")
-      .rdd
-      .map(r => (r.getSeq[String](0).head, r.getSeq[String](0).drop(1).mkString(" ")))
-      .toDF("prevOrigWord", "nextBigram")
-      .filter($"prevOrigWord" =!= NGramConfig.UnknownToken)
-      .filter($"prevOrigWord" =!= NGramConfig.StartToken)
-
-    val wordBackward = backwardFrame
-      .join(backwardProb, Seq("nextBigram"), "left")
-      .select("prevOrigWord", "nextBigram", "wordHint")
-    wordBackward.show(false)
   }
 }
