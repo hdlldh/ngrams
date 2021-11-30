@@ -34,7 +34,7 @@ object ProbEstimator {
       .fill(0L, Seq("numerator", "denominator"))
       .withColumn(
         "probability",
-        ($"numerator" + lit(NGramConfig.K)) / ($"denominator" + lit(NGramConfig.K + vocabSize + 2))
+        ($"numerator" + lit(NGramConfig.K)) / ($"denominator" + lit(NGramConfig.K * vocabSize))
       )
 
     probFrame
