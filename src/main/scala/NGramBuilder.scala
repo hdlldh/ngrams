@@ -43,21 +43,41 @@ object NGramBuilder {
 
     val extendCorpus = Utils.addPrefixAndSuffix(replacedCorpus, 1, 1)
     val trigramFrame = Utils.countNGrams(3, extendCorpus)
-    trigramFrame
-      .repartition(1)
-      .write
-      .mode("overwrite")
-      .save(args(4))
-
-    val bigramFrame = trigramFrame
       .withColumn(
         "masked_ngram",
         regexp_replace($"ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
       )
-      .groupBy("masked_ngram")
-      .agg(sum($"count").as("count"))
+      .withColumn("word", regexp_extract($"ngram", "(\\S+) (\\S+) (\\S+)", 2))
+      .withColumnRenamed("count", "numerator")
 
-    bigramFrame
+    val bigramFrame = trigramFrame
+      .groupBy("masked_ngram")
+      .agg(sum($"numerator").as("denominator"))
+
+    val probFrame = trigramFrame
+      .join(bigramFrame, Seq("masked_ngram"), "left")
+      .na
+      .fill(0L, Seq("numerator", "denominator"))
+      .withColumn(
+        "probability",
+        ($"numerator" + lit(NGramConfig.K)) / ($"denominator" + lit(NGramConfig.K * vocabSize))
+      )
+
+    val topHintFrame = probFrame
+      .filter($"word" =!= NGramConfig.UnknownToken)
+      .filter($"word" =!= NGramConfig.StartToken)
+      .filter($"word" =!= NGramConfig.EndToken)
+      .sort($"masked_ngram", desc("probability"))
+      .select("masked_ngram", "word", "probability")
+      .rdd
+      .map { r =>
+        (r.getString(0), s"${r.getString(1)}:${r.getDouble(2).toString}")
+      }
+      .groupByKey()
+      .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
+      .toDF("masked_ngram", "hint_words")
+
+    topHintFrame
       .repartition(1)
       .write
       .mode("overwrite")
