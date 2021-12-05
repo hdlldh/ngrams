@@ -43,6 +43,7 @@ object NGramBuilder {
 
     val extendCorpus =
       Utils.addPrefixAndSuffix(replacedCorpus, Config.NumStartTokens, Config.NumEndTokens)
+
     val trigramFrame = Utils
       .countNGrams(Config.N, extendCorpus)
       .withColumn(

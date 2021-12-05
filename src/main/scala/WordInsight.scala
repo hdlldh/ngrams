@@ -36,7 +36,7 @@ object WordInsight {
           r.getString(0),
           r.getString(1),
           r.getString(1)
-            .split("\\s+")
+            .split("[\\W]+")
             .map { w =>
               if (vocabSet.contains(w)) w
               else Config.UnknownToken
