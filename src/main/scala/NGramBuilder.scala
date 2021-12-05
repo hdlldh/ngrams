@@ -41,13 +41,18 @@ object NGramBuilder {
 
     val replacedCorpus = Utils.handleOov(tokenizedCorpus, vocabSet)
 
-    val extendCorpus = Utils.addPrefixAndSuffix(replacedCorpus, 1, 1)
-    val trigramFrame = Utils.countNGrams(3, extendCorpus)
+    val extendCorpus =
+      Utils.addPrefixAndSuffix(replacedCorpus, Config.NumStartTokens, Config.NumEndTokens)
+    val trigramFrame = Utils
+      .countNGrams(Config.N, extendCorpus)
       .withColumn(
         "masked_ngram",
-        regexp_replace($"ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
+        regexp_replace($"ngram", Config.WordExtractPattern, Config.WordReplacement)
       )
-      .withColumn("word", regexp_extract($"ngram", "(\\S+) (\\S+) (\\S+)", 2))
+      .withColumn(
+        "word",
+        regexp_extract($"ngram", Config.WordExtractPattern, Config.CenterWordIndex)
+      )
       .withColumnRenamed("count", "numerator")
 
     val bigramFrame = trigramFrame
@@ -60,13 +65,13 @@ object NGramBuilder {
       .fill(0L, Seq("numerator", "denominator"))
       .withColumn(
         "probability",
-        ($"numerator" + lit(NGramConfig.K)) / ($"denominator" + lit(NGramConfig.K * vocabSize))
+        ($"numerator" + lit(Config.K)) / ($"denominator" + lit(Config.K * vocabSize))
       )
 
     val topHintFrame = probFrame
-      .filter($"word" =!= NGramConfig.UnknownToken)
-      .filter($"word" =!= NGramConfig.StartToken)
-      .filter($"word" =!= NGramConfig.EndToken)
+      .filter($"word" =!= Config.UnknownToken)
+      .filter($"word" =!= Config.StartToken)
+      .filter($"word" =!= Config.EndToken)
       .sort($"masked_ngram", desc("probability"))
       .select("masked_ngram", "word", "probability")
       .rdd
@@ -74,7 +79,7 @@ object NGramBuilder {
         (r.getString(0), s"${r.getString(1)}:${r.getDouble(2).toString}")
       }
       .groupByKey()
-      .mapValues(r => r.take(NGramConfig.NumHints).mkString(", "))
+      .mapValues(r => r.take(Config.NumHints).mkString(", "))
       .toDF("masked_ngram", "hint_words")
 
     topHintFrame

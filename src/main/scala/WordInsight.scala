@@ -19,16 +19,16 @@ object WordInsight {
       .select("token")
       .rdd
       .map(r => r.getString(0))
-      .collect ++ Array(NGramConfig.StartToken, NGramConfig.EndToken, ".", "?", "!", "$")).toSet
+      .collect ++ Array(Config.StartToken, Config.EndToken, ".", "?", "!", "$")).toSet
 
     val probFrame = spark.read
       .load(args(1))
 
     val tokenizedSubject = Utils.tokenizer(testSubject)
-    val extendSubject = Utils.addPrefixAndSuffix(tokenizedSubject, 1, 1)
+    val extendSubject = Utils.addPrefixAndSuffix(tokenizedSubject, Config.NumStartTokens, Config.NumEndTokens)
     val trigramCount = Utils
-      .countNGrams(3, extendSubject)
-      .withColumn("orig_word", regexp_extract($"ngram", "(\\S+) (\\S+) (\\S+)", 2))
+      .countNGrams(Config.N, extendSubject)
+      .withColumn("orig_word", regexp_extract($"ngram", Config.WordExtractPattern, Config.CenterWordIndex))
       .select("orig_word", "ngram")
       .rdd
       .map(r =>
@@ -39,7 +39,7 @@ object WordInsight {
             .split("\\s+")
             .map { w =>
               if (vocabSet.contains(w)) w
-              else NGramConfig.UnknownToken
+              else Config.UnknownToken
             }
             .mkString(" ")
         )
@@ -47,7 +47,7 @@ object WordInsight {
       .toDF("orig_word", "orig_ngram", "replaced_ngram")
       .withColumn(
         "masked_ngram",
-        regexp_replace($"replaced_ngram", NGramConfig.WordPattern, NGramConfig.WordReplacement)
+        regexp_replace($"replaced_ngram", Config.WordExtractPattern, Config.WordReplacement)
       )
 
     val wordHints = trigramCount

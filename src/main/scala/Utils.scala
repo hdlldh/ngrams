@@ -11,7 +11,7 @@ object Utils {
       .map(r => r.replaceAll("\\?", " ?"))
       .map(r => r.replaceAll("\\!", " !"))
       .map(r => r.split("\\s+"))
-      .filter(r => r.length >= NGramConfig.MinNumTokens)
+      .filter(r => r.length >= Config.MinNumTokens)
   }
 
   def handleOov(tokenizedCorpus: RDD[Array[String]], vocabSet: Set[String]): RDD[Array[String]] = {
@@ -19,18 +19,18 @@ object Utils {
       .map(r =>
         r.map { w =>
           if (vocabSet.contains(w)) w
-          else NGramConfig.UnknownToken
+          else Config.UnknownToken
         }
       )
   }
 
   def addPrefixAndSuffix(
     replacedCorpus: RDD[Array[String]],
-    numStartToken: Int,
-    numEndToken: Int
+    numStartTokens: Int,
+    numEndTokens: Int
   ): RDD[Array[String]] = {
-    val prefix = (1 to numStartToken).map(_ => NGramConfig.StartToken).toArray
-    val suffix = (1 to numEndToken).map(_ => NGramConfig.EndToken).toArray
+    val prefix = (1 to numStartTokens).map(_ => Config.StartToken).toArray
+    val suffix = (1 to numEndTokens).map(_ => Config.EndToken).toArray
     replacedCorpus.map(r => prefix ++ r ++ suffix)
   }
 
