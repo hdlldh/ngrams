@@ -5,10 +5,10 @@ object Config {
   final val EndToken = "<eos>"
   final val K = 1.0
   final val NumHints = 5
-  final val N = 4
-  final val NumStartTokens = 2
+  final val N = 3
+  final val NumStartTokens = 1
   final val NumEndTokens = 1
-  final val CenterWordIndex = 3
+  final val CenterWordIndex = 2
   final val WordExtractPattern = (1 to N).map(_=>"(\\S+)").mkString(" ")
   final val WordReplacement = (1 to N).map {n=>
     if (n == CenterWordIndex) "#"
