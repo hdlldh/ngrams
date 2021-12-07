@@ -10,10 +10,8 @@ object NGramBuilder {
 
     import spark.implicits._
 
-    val sc = spark.sparkContext
 
-    val vocabSize = args(0).toInt
-    val corpus = sc.textFile(args(1))
+    val corpus = spark.read.load(args(0)).select("subject").rdd.map(r => r.getString(0))
 
     val tokenizedCorpus = Utils.tokenizer(corpus)
 
@@ -21,16 +19,16 @@ object NGramBuilder {
       .flatMap(_.toSeq)
       .map(r => (r, 1L))
       .reduceByKey(_ + _)
-      .filter(r => r._1.matches("[a-zA-Z\\.\\?\\!]+"))
+      .filter(r => r._1.matches("[a-zA-Z\\.\\?\\!]+") && r._2 >= Config.MinTermFreq)
       .sortBy(_._2, false)
       .toDF("token", "count")
-      .limit(vocabSize)
+      .limit(Config.MaxVocabSize)
 
     topNTokens
       .repartition(1)
       .write
       .mode("overwrite")
-      .save(args(2))
+      .save(args(1))
 
     val vocabSet = topNTokens
       .select("token")
@@ -38,6 +36,8 @@ object NGramBuilder {
       .map(r => r.getString(0))
       .collect
       .toSet
+
+    val vocabSize = vocabSet.size
 
     val replacedCorpus = Utils.handleOov(tokenizedCorpus, vocabSet)
 
@@ -87,7 +87,7 @@ object NGramBuilder {
       .repartition(1)
       .write
       .mode("overwrite")
-      .save(args(3))
+      .save(args(2))
 
   }
 

@@ -1,5 +1,5 @@
-JAR_FILE=$HOME/IdeaProjects/ngrams/target/scala-2.12/ngrams_2.12-0.1.jar
-INPUT_FOLDER=$HOME/Workspace/ngrams/tmp
+JAR_FILE=$HOME/Workspace/ngrams/target/scala-2.12/ngrams_2.12-0.1.jar
+INPUT_FOLDER=$HOME/Workspace/ngrams/output/slt
 $SPARK_HOME/bin/spark-submit \
 --master local[*] \
 --deploy-mode client \

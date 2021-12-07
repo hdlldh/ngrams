@@ -1,4 +1,6 @@
 object Config {
+  final val MinTermFreq = 5
+  final val MaxVocabSize = 1000000
   final val MinNumTokens = 3
   final val UnknownToken = "<unk>"
   final val StartToken = "<sos>"

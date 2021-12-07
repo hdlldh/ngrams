@@ -13,6 +13,8 @@ object WordInsight {
     sc.setLogLevel("WARN")
 
     val testSubject = sc.parallelize(Seq(args(2)))
+    println("Input subject line:")
+    println(args(2))
 
     val topNTokens = spark.read.load(args(0))
     val vocabSet = (topNTokens
@@ -36,7 +38,7 @@ object WordInsight {
           r.getString(0),
           r.getString(1),
           r.getString(1)
-            .split("[\\W]+")
+            .split("\\s+")
             .map { w =>
               if (vocabSet.contains(w)) w
               else Config.UnknownToken
