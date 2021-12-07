@@ -6,6 +6,7 @@ object Utils {
   def tokenizer(corpus: RDD[String]): RDD[Array[String]] = {
     corpus
       .map(r => r.toLowerCase)
+      .map(r => r.replaceAll("\\{\\{dynamic\\}\\}", ""))
       .map(r => r.replaceAll("[^\\w\\.\\?\\!\\$ ]+", " "))
       .map(r => r.replaceAll("\\.", " ."))
       .map(r => r.replaceAll("\\?", " ?"))
